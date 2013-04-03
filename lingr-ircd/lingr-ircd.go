@@ -133,6 +133,8 @@ func ClientConn(conn net.Conn) {
 				text = text[1:]
 			}
 			client.Say(room, text)
+		case "PING":
+			fmt.Fprintf(conn, ":%s PONG #%s\n", prefix(user), args[0])
 		case "QUIT":
 			fmt.Fprintf(conn, "ERROR :Closing Link: %s (\"Client quit\")\n", prefix(user))
 			return
