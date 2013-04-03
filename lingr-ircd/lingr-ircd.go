@@ -42,7 +42,7 @@ func ClientConn(conn net.Conn) {
 		case "USER":
 			log.Printf("connecting to Lingr: %s\n", user)
 			client = lingr.NewClient(user, password, *apikey)
-			client.Debug = true
+			//client.Debug = true
 			client.CreateSession()
 			roomIds = client.GetRooms()
 			client.ShowRoom(strings.Join(roomIds, ","))
