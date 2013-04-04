@@ -54,24 +54,24 @@ type Roster struct {
 }
 
 type Room struct {
-	Id      string    `json:"id"`
-	Name    string    `json:"name"`
-	Blurb   string    `json:"blurb"`
-	BackLog []Message `json:"messages"`
-	Roster  Roster    `json:"roster"`
+	Id      string      `json:"id"`
+	Name    string      `json:"name"`
+	Blurb   interface{} `json:"blurb"`
+	BackLog []Message   `json:"messages"`
+	Roster  Roster      `json:"roster"`
 }
 
 type Message struct {
-	Id              string `json:"id"`
-	Room            string `json:"room"`
-	PublicSessionId string `json:"public_session_id"`
-	IconUrl         string `json:"icon_url"`
-	Type            string `json:"type"`
-	SpeakerId       string `json:"speaker_id"`
-	Nickname        string `json:"nickname"`
-	Text            string `json:"text"`
-	timestamp       string `json:"timestamp"`
-	Mine            bool   `json:"mine"`
+	Id              string      `json:"id"`
+	Room            string      `json:"room"`
+	PublicSessionId string      `json:"public_session_id"`
+	IconUrl         string      `json:"icon_url"`
+	Type            string      `json:"type"`
+	SpeakerId       string      `json:"speaker_id"`
+	Nickname        string      `json:"nickname"`
+	Text            string      `json:"text"`
+	Timestamp       string      `json:"timestamp"`
+	Mine            bool        `json:"mine"`
 }
 
 type Presence struct {
@@ -80,7 +80,7 @@ type Presence struct {
 	IconUrl         string `json:"icon_url"`
 	Username        string `json:"username"`
 	Nickname        string `json:"nickname"`
-	timestamp       string `json:"timestamp"`
+	Timestamp       string `json:"timestamp"`
 	Status          string `json:"status"`
 	Text            string `json:"text"`
 }
@@ -187,6 +187,8 @@ func (c *Client) CreateSession() bool {
 		c.nickname = res.Nickname
 		c.session = res.Session
 		return true
+	} else if e != nil {
+		println(e.Error())
 	}
 	return false
 }
@@ -197,6 +199,8 @@ func (c *Client) GetRooms() []string {
 	if e == nil && res.Status == "ok" {
 		c.RoomIds = res.RoomIds
 		return res.RoomIds
+	} else if e != nil {
+		println(e.Error())
 	}
 	return nil
 }
@@ -207,6 +211,8 @@ func (c *Client) ShowRoom(room_id string) bool {
 	if e == nil && res.Status == "ok" {
 		c.Rooms = res.Rooms
 		return true
+	} else if e != nil {
+		println(e.Error())
 	}
 	return false
 }
@@ -217,6 +223,8 @@ func (c *Client) Subscribe(room_id string) bool {
 	if e == nil && res.Status == "ok" {
 		c.counter = res.Counter
 		return true
+	} else if e != nil {
+		println(e.Error())
 	}
 	return false
 }
@@ -226,6 +234,8 @@ func (c *Client) Unsubscribe(room_id string) bool {
 	e := c.get("room/unsubscribe", request{"session": c.session, "room": room_id}, &res)
 	if e == nil && res.Status == "ok" {
 		return true
+	} else if e != nil {
+		println(e.Error())
 	}
 	return false
 }
@@ -235,6 +245,8 @@ func (c *Client) Say(room_id string, text string) bool {
 	e := c.get("room/say", request{"session": c.session, "room": room_id, "nickname": c.nickname, "text": text}, &res)
 	if e == nil && res.Status == "ok" {
 		return true
+	} else if e != nil {
+		println(e.Error())
 	}
 	return false
 }
@@ -243,6 +255,7 @@ func (c *Client) Observe() error {
 	var res resObserve
 	e := c.get("event/observe", request{"session": c.session, "counter": fmt.Sprintf("%d", c.counter)}, &res)
 	if e != nil {
+		println(e.Error())
 		return e
 	}
 	if res.Status == "ok" {
