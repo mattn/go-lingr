@@ -22,11 +22,60 @@ func ClientConn(conn net.Conn) {
 	user := ""
 	password := ""
 	var client *lingr.Client
-	var roomIds []string
 
 	defer conn.Close()
 
 	r := bufio.NewReader(conn)
+
+	done := make(chan bool)
+	UpdateRooms := func(roomIds []string) {
+		client.ShowRoom(strings.Join(roomIds, ","))
+		client.Subscribe(strings.Join(roomIds, ","))
+		log.Printf("connected to Lingr\n")
+
+		fmt.Fprintf(conn, ":lingr %03d %s %s\n", 1, user, ":Welcome to Lingr!")
+		fmt.Fprintf(conn, ":lingr %03d %s %s\n", 376, user, ":End of MOTD")
+
+		var room lingr.Room
+		for _, id := range roomIds {
+			for _, r := range client.Rooms {
+				if r.Id == id {
+					room = r
+					break
+				}
+			}
+			fmt.Fprintf(conn, ":%s JOIN #%s\n", prefix(user), id)
+			fmt.Fprintf(conn, ":lingr %03d #%s :%s\n", 332, user, room.Name)
+			var names []string
+			for _, member := range room.Roster.Members {
+				if member.IsOwner {
+					names = append(names, "@"+member.Username)
+				} else {
+					names = append(names, member.Username)
+				}
+			}
+			fmt.Fprintf(conn, ":lingr %03d %s = #%s :%s\n", 353, user, id, strings.Join(names, " "))
+			fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
+			/*
+				for _, arg := range args {
+					arg = strings.ToUpper(arg)
+					if arg == "BACKLOG" {
+
+					}
+				}
+			*/
+		}
+		go func() {
+			for {
+				select {
+				case <- done:
+					return
+				}
+				client.Observe()
+			}
+		}()
+	}
+
 	for {
 		line, _, e := r.ReadLine()
 		if e != nil {
@@ -35,6 +84,9 @@ func ClientConn(conn net.Conn) {
 		tokens := strings.SplitN(string(line), " ", 3)
 		cmd := strings.ToUpper(tokens[0])
 		args := tokens[1:]
+		if cmd != "PASS" {
+			log.Printf("%v\n", tokens)
+		}
 		switch cmd {
 		case "NICK":
 			user = args[0]
@@ -45,48 +97,6 @@ func ClientConn(conn net.Conn) {
 			client = lingr.NewClient(user, password, *apikey)
 			//client.Debug = true
 			client.CreateSession()
-			if rooms != nil {
-				roomIds = strings.Split(*rooms, ",")
-			} else {
-				roomIds = client.GetRooms()
-			}
-			client.ShowRoom(strings.Join(roomIds, ","))
-			client.Subscribe(strings.Join(roomIds, ","))
-			log.Printf("connected to Lingr\n")
-
-			fmt.Fprintf(conn, ":lingr %03d %s %s\n", 1, user, ":Welcome to Lingr!")
-			fmt.Fprintf(conn, ":lingr %03d %s %s\n", 376, user, ":End of MOTD")
-
-			var room lingr.Room
-			for _, id := range roomIds {
-				for _, r := range client.Rooms {
-					if r.Id == id {
-						room = r
-						break
-					}
-				}
-				fmt.Fprintf(conn, ":%s JOIN #%s\n", prefix(user), id)
-				fmt.Fprintf(conn, ":lingr %03d #%s :%s\n", 332, user, room.Name)
-				var names []string
-				for _, member := range room.Roster.Members {
-					if member.IsOwner {
-						names = append(names, "@"+member.Username)
-					} else {
-						names = append(names, member.Username)
-					}
-				}
-				fmt.Fprintf(conn, ":lingr %03d %s = #%s :%s\n", 353, user, id, strings.Join(names, " "))
-				fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
-				/*
-					for _, arg := range args {
-						arg = strings.ToUpper(arg)
-						if arg == "BACKLOG" {
-
-						}
-					}
-				*/
-			}
-
 			client.OnMessage = func(room lingr.Room, message lingr.Message) {
 				if message.Mine {
 					return
@@ -105,11 +115,14 @@ func ClientConn(conn net.Conn) {
 						strings.TrimSpace(line))
 				}
 			}
-			go func() {
-				for {
-					client.Observe()
-				}
-			}()
+
+			var roomIds []string
+			if rooms != nil {
+				roomIds = strings.Split(*rooms, ",")
+			} else {
+				roomIds = client.GetRooms()
+			}
+			UpdateRooms(roomIds)
 		case "WHOIS":
 			var member lingr.Member
 			var joined []string
@@ -137,9 +150,50 @@ func ClientConn(conn net.Conn) {
 			for len(text) > 0 && text[0] == ':' {
 				text = text[1:]
 			}
+			log.Printf("saying #%s %s\n", room, text)
 			client.Say(room, text)
 		case "PING":
 			fmt.Fprintf(conn, ":%s PONG #%s\n", prefix(user), args[0])
+		case "JOIN":
+			rooms := strings.Split(args[0], ",")
+			for _, room := range rooms {
+				for len(room) > 0 && room[0] == '#' {
+					room = room[1:]
+				}
+				found := -1
+				for i := range client.RoomIds {
+					if client.RoomIds[i] == room {
+						found = i
+						break
+					}
+				}
+				if found == -1 {
+					client.RoomIds = append(client.RoomIds, room)
+				}
+			}
+			done <-true
+			log.Printf("subscribing %s\n", args[0])
+			UpdateRooms(client.RoomIds)
+		case "PART":
+			rooms := strings.Split(args[0], ",")
+			for _, room := range rooms {
+				for len(room) > 0 && room[0] == '#' {
+					room = room[1:]
+				}
+				found := -1
+				for i := range client.RoomIds {
+					if client.RoomIds[i] == room {
+						found = i
+						break
+					}
+				}
+				if found != -1 {
+					client.RoomIds = append(client.RoomIds[:found], client.RoomIds[found+1:]...)
+				}
+			}
+			log.Printf("unsubscribing %s\n", args[0])
+			done <-true
+			UpdateRooms(client.RoomIds)
 		case "QUIT":
 			fmt.Fprintf(conn, "ERROR :Closing Link: %s (\"Client quit\")\n", prefix(user))
 			return
