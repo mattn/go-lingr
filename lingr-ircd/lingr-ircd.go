@@ -36,26 +36,29 @@ func ClientConn(conn net.Conn) {
 		fmt.Fprintf(conn, ":lingr %03d %s %s\n", 1, user, ":Welcome to Lingr!")
 		fmt.Fprintf(conn, ":lingr %03d %s %s\n", 376, user, ":End of MOTD")
 
-		var room lingr.Room
+		var room *lingr.Room
 		for _, id := range roomIds {
+			room = nil
 			for _, r := range client.Rooms {
 				if r.Id == id {
-					room = r
+					room = &r
 					break
 				}
 			}
-			fmt.Fprintf(conn, ":%s JOIN #%s\n", prefix(user), id)
-			fmt.Fprintf(conn, ":lingr %03d #%s :%s\n", 332, user, room.Name)
-			var names []string
-			for _, member := range room.Roster.Members {
-				if member.IsOwner {
-					names = append(names, "@"+member.Username)
-				} else {
-					names = append(names, member.Username)
+			if room != nil {
+				fmt.Fprintf(conn, ":%s JOIN #%s\n", prefix(user), id)
+				fmt.Fprintf(conn, ":lingr %03d #%s :%s\n", 332, user, room.Name)
+				var names []string
+				for _, member := range room.Roster.Members {
+					if member.IsOwner {
+						names = append(names, "@"+member.Username)
+					} else {
+						names = append(names, member.Username)
+					}
 				}
+				fmt.Fprintf(conn, ":lingr %03d %s = #%s :%s\n", 353, user, id, strings.Join(names, " "))
+				fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
 			}
-			fmt.Fprintf(conn, ":lingr %03d %s = #%s :%s\n", 353, user, id, strings.Join(names, " "))
-			fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
 			/*
 				for _, arg := range args {
 					arg = strings.ToUpper(arg)
@@ -68,9 +71,11 @@ func ClientConn(conn net.Conn) {
 		go func() {
 			for {
 				select {
-				case <- done:
+				case <-done:
 					return
+				default:
 				}
+				log.Printf("observing")
 				client.Observe()
 			}
 		}()
@@ -117,7 +122,7 @@ func ClientConn(conn net.Conn) {
 			}
 
 			var roomIds []string
-			if rooms != nil {
+			if rooms != nil && len(*rooms) > 0 {
 				roomIds = strings.Split(*rooms, ",")
 			} else {
 				roomIds = client.GetRooms()
@@ -167,7 +172,7 @@ func ClientConn(conn net.Conn) {
 						break
 					}
 				}
-				if found == -1 {
+				if len(room) > 0 && found == -1 {
 					client.RoomIds = append(client.RoomIds, room)
 				}
 			}
