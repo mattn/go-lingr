@@ -12,6 +12,7 @@ import (
 
 var addr = flag.String("addr", ":6667", "address:port")
 var apikey = flag.String("apikey", "", "lingr apikey")
+var rooms = flag.String("rooms", "", "lingr rooms")
 
 func prefix(user string) string {
 	return fmt.Sprintf("%s!%s@lingr.com", user, user)
@@ -44,7 +45,11 @@ func ClientConn(conn net.Conn) {
 			client = lingr.NewClient(user, password, *apikey)
 			//client.Debug = true
 			client.CreateSession()
-			roomIds = client.GetRooms()
+			if rooms != nil {
+				roomIds = strings.Split(*rooms, ",")
+			} else {
+				roomIds = client.GetRooms()
+			}
 			client.ShowRoom(strings.Join(roomIds, ","))
 			client.Subscribe(strings.Join(roomIds, ","))
 			log.Printf("connected to Lingr\n")

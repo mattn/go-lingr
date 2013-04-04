@@ -20,9 +20,9 @@ type Client struct {
 	apiKey   string
 	session  string
 	publicId string
-	roomIds  []string
 	counter  int
 
+	RoomIds   []string
 	Rooms     []Room
 	Debug     bool
 	OnJoin    func(Room, Presence)
@@ -195,7 +195,7 @@ func (c *Client) GetRooms() []string {
 	var res resRoomIds
 	e := c.get("user/get_rooms", request{"session": c.session}, &res)
 	if e == nil && res.Status == "ok" {
-		c.roomIds = res.RoomIds
+		c.RoomIds = res.RoomIds
 		return res.RoomIds
 	}
 	return nil
