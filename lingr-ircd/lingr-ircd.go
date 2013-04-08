@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var addr = flag.String("addr", ":6667", "address:port")
+var addr = flag.String("addr", ":26667", "address:port")
 var apikey = flag.String("apikey", "", "lingr apikey")
 var rooms = flag.String("rooms", "", "lingr rooms")
 
