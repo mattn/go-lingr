@@ -15,6 +15,7 @@ import (
 var addr = flag.String("addr", ":26667", "address:port")
 var apikey = flag.String("apikey", "", "lingr apikey")
 var rooms = flag.String("rooms", "", "lingr rooms")
+//var backlog = flag.Int("backlog", 0, "backlog count")
 
 func prefix(user string) string {
 	return fmt.Sprintf("%s!%s@lingr.com", user, user)
@@ -52,21 +53,18 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 			fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
 		}
 		/*
-		for _, arg := range args {
-			arg = strings.ToUpper(arg)
-			if arg == "BACKLOG" {
-				for _, message := range room.BackLog {
-					lines := strings.Split(message.Text, "\n")
-					for _, line := range lines {
-						fmt.Fprintf(conn, ":%s %s #%s :%s\n",
-							prefix(message.SpeakerId),
-							cmd,
-							room.Id,
-							strings.TrimSpace(line))
-					}
+		if backlog {
+			for _, message := range room.BackLog {
+				lines := strings.Split(message.Text, "\n")
+				for _, line := range lines {
+					fmt.Fprintf(conn, ":%s %s #%s :%s\n",
+						prefix(message.SpeakerId),
+						"NOTICE",
+						room.Id,
+						strings.TrimSpace(line))
 				}
-				room.BackLog = []Message {}
 			}
+			room.BackLog = []Message {}
 		}
 		*/
 	}

@@ -127,6 +127,11 @@ type resObserve struct {
 	Counter int     `json:"counter"`
 }
 
+type resArchives struct {
+	Status  string     `json:"status"`
+	Messages []Message `json:"messages"`
+}
+
 func NewClient(user, password, apiKey string) *Client {
 	c := new(Client)
 	c.endpoint = "http://lingr.com/api/"
