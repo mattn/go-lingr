@@ -65,6 +65,7 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 							strings.TrimSpace(line))
 					}
 				}
+				room.BackLog = []Message {}
 			}
 		}
 		*/
