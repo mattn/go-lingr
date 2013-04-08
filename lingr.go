@@ -146,6 +146,8 @@ func (c *Client) get(path string, params request, res interface{}) error {
 	if e != nil {
 		return e
 	}
+	defer r.Body.Close()
+
 	var reader io.Reader
 	if c.Debug {
 		reader = io.TeeReader(r.Body, os.Stdout)
@@ -169,7 +171,16 @@ func (c *Client) post(path string, params request, res interface{}) error {
 	if e != nil {
 		return e
 	}
-	e = json.NewDecoder(r.Body).Decode(&res)
+	defer r.Body.Close()
+
+	var reader io.Reader
+	if c.Debug {
+		reader = io.TeeReader(r.Body, os.Stdout)
+	} else {
+		reader = r.Body
+	}
+
+	e = json.NewDecoder(reader).Decode(&res)
 	if e != nil {
 		return e
 	}
