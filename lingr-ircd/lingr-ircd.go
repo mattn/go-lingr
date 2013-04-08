@@ -51,6 +51,7 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 			fmt.Fprintf(conn, ":lingr %03d %s = #%s :%s\n", 353, user, id, strings.Join(names, " "))
 			fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
 		}
+		/*
 		for _, arg := range args {
 			arg = strings.ToUpper(arg)
 			if arg == "BACKLOG" {
@@ -66,6 +67,7 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 				}
 			}
 		}
+		*/
 	}
 }
 
