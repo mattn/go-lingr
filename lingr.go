@@ -21,6 +21,7 @@ type Client struct {
 	session  string
 	publicId string
 	counter  int
+	messageIds []string
 
 	RoomIds   []string
 	Rooms     []Room
@@ -269,6 +270,8 @@ func (c *Client) Say(room_id string, text string) bool {
 
 func (c *Client) Observe() error {
 	var res resObserve
+	messageIds := []string{}
+
 	e := c.get("event/observe", request{"session": c.session, "counter": fmt.Sprintf("%d", c.counter)}, &res)
 	if e != nil {
 		println(e.Error())
@@ -284,8 +287,18 @@ func (c *Client) Observe() error {
 					if event.Message.PublicSessionId == c.publicId {
 						event.Message.Mine = true
 					}
-					if r.Id == event.Message.Room {
-						c.OnMessage(r, *event.Message)
+					found := false
+					for _, id := range c.messageIds {
+						if id == event.Message.Id {
+							found = true
+						}
+					}
+
+					if !found {
+						c.messageIds = append(c.messageIds, event.Message.Id)
+						if r.Id == event.Message.Room {
+							c.OnMessage(r, *event.Message)
+						}
 					}
 				}
 				if event.Presence != nil {
@@ -300,6 +313,7 @@ func (c *Client) Observe() error {
 				}
 			}
 		}
+		c.messageIds = messageIds
 	}
 	return nil
 }
