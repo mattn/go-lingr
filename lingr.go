@@ -314,7 +314,9 @@ func (c *Client) Observe() error {
 				}
 			}
 		}
-		c.messageIds = messageIds
+		if len(messageIds) > 0 {
+			c.messageIds = messageIds
+		}
 	}
 	return nil
 }
