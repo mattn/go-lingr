@@ -15,6 +15,7 @@ import (
 var addr = flag.String("addr", ":26667", "address:port")
 var apikey = flag.String("apikey", "", "lingr apikey")
 var rooms = flag.String("rooms", "", "lingr rooms")
+var debug = flag.Bool("debug", false, "debug stream")
 //var backlog = flag.Int("backlog", 0, "backlog count")
 
 func prefix(user string) string {
@@ -103,7 +104,7 @@ func ClientConn(conn net.Conn) {
 		case "USER":
 			log.Printf("connecting to Lingr: %s\n", user)
 			client = lingr.NewClient(user, password, *apikey)
-			//client.Debug = true
+			client.Debug = *debug
 			client.CreateSession()
 			client.OnMessage = func(room lingr.Room, message lingr.Message) {
 				if message.Mine {
@@ -122,6 +123,41 @@ func ClientConn(conn net.Conn) {
 						room.Id,
 						strings.TrimSpace(line))
 				}
+			}
+			client.OnJoin = func(room lingr.Room, presence lingr.Presence) {
+				found := -1
+				for i, m := range room.Roster.Members {
+					if m.Username == presence.Username {
+						found = i
+					}
+				}
+				if found == -1 {
+					room.Roster.Members = append(room.Roster.Members, lingr.Member {
+						presence.Username,
+						presence.Nickname,
+						presence.IconUrl,
+						false,
+						true})
+				}
+				fmt.Fprintf(conn, ":%s %s #%s\n",
+					prefix(presence.Username),
+					"JOIN",
+					room.Id)
+			}
+			client.OnLeave = func(room lingr.Room, presence lingr.Presence) {
+				found := -1
+				for i, m := range room.Roster.Members {
+					if m.Username == presence.Username {
+						found = i
+					}
+				}
+				if found != -1 {
+					room.Roster.Members = append(room.Roster.Members[:found], room.Roster.Members[found+1:]...)
+				}
+				fmt.Fprintf(conn, ":%s %s #%s\n",
+					prefix(presence.Username),
+					"PART",
+					room.Id)
 			}
 
 			if rooms != nil && len(*rooms) > 0 {
