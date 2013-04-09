@@ -287,6 +287,8 @@ func (c *Client) Observe() error {
 					if event.Message.PublicSessionId == c.publicId {
 						event.Message.Mine = true
 					}
+
+					messageIds = append(messageIds, event.Message.Id)
 					found := false
 					for _, id := range c.messageIds {
 						if id == event.Message.Id {
@@ -295,7 +297,6 @@ func (c *Client) Observe() error {
 					}
 
 					if !found {
-						c.messageIds = append(c.messageIds, event.Message.Id)
 						if r.Id == event.Message.Room {
 							c.OnMessage(r, *event.Message)
 						}
