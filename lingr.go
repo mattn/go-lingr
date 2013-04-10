@@ -279,6 +279,9 @@ func (c *Client) Observe() error {
 	}
 	if res.Status == "ok" {
 		if res.Counter != 0 {
+			if c.counter >= res.Counter {
+				return nil
+			}
 			c.counter = res.Counter
 		}
 		for _, event := range res.Events {
