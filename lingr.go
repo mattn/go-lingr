@@ -13,14 +13,14 @@ import (
 type Client struct {
 	c *http.Client
 
-	nickname string
-	endpoint string
-	user     string
-	password string
-	apiKey   string
-	session  string
-	publicId string
-	counter  int
+	nickname   string
+	endpoint   string
+	user       string
+	password   string
+	apiKey     string
+	session    string
+	publicId   string
+	counter    int
 	messageIds []string
 
 	RoomIds   []string
@@ -63,16 +63,16 @@ type Room struct {
 }
 
 type Message struct {
-	Id              string      `json:"id"`
-	Room            string      `json:"room"`
-	PublicSessionId string      `json:"public_session_id"`
-	IconUrl         string      `json:"icon_url"`
-	Type            string      `json:"type"`
-	SpeakerId       string      `json:"speaker_id"`
-	Nickname        string      `json:"nickname"`
-	Text            string      `json:"text"`
-	Timestamp       string      `json:"timestamp"`
-	Mine            bool        `json:"mine"`
+	Id              string `json:"id"`
+	Room            string `json:"room"`
+	PublicSessionId string `json:"public_session_id"`
+	IconUrl         string `json:"icon_url"`
+	Type            string `json:"type"`
+	SpeakerId       string `json:"speaker_id"`
+	Nickname        string `json:"nickname"`
+	Text            string `json:"text"`
+	Timestamp       string `json:"timestamp"`
+	Mine            bool   `json:"mine"`
 }
 
 type Presence struct {
@@ -129,7 +129,7 @@ type resObserve struct {
 }
 
 type resArchives struct {
-	Status  string     `json:"status"`
+	Status   string    `json:"status"`
 	Messages []Message `json:"messages"`
 }
 
@@ -140,6 +140,7 @@ func NewClient(user, password, apiKey string) *Client {
 	c.password = password
 	c.apiKey = apiKey
 	c.c = http.DefaultClient
+	c.messageIds = []string{}
 	return c
 }
 
@@ -270,7 +271,6 @@ func (c *Client) Say(room_id string, text string) bool {
 
 func (c *Client) Observe() error {
 	var res resObserve
-	messageIds := []string{}
 
 	e := c.get("event/observe", request{"session": c.session, "counter": fmt.Sprintf("%d", c.counter)}, &res)
 	if e != nil {
@@ -279,7 +279,7 @@ func (c *Client) Observe() error {
 	}
 	if res.Status == "ok" {
 		if res.Counter != 0 {
-			if c.counter >= res.Counter {
+			if c.counter == res.Counter {
 				return nil
 			}
 			c.counter = res.Counter
@@ -291,7 +291,6 @@ func (c *Client) Observe() error {
 						event.Message.Mine = true
 					}
 
-					messageIds = append(messageIds, event.Message.Id)
 					found := false
 					for _, id := range c.messageIds {
 						if id == event.Message.Id {
@@ -300,6 +299,10 @@ func (c *Client) Observe() error {
 					}
 
 					if !found {
+						if len(c.messageIds) > 10 {
+							c.messageIds = c.messageIds[1:]
+						}
+						c.messageIds = append(c.messageIds, event.Message.Id)
 						if r.Id == event.Message.Room {
 							c.OnMessage(r, *event.Message)
 						}
@@ -316,9 +319,6 @@ func (c *Client) Observe() error {
 					}
 				}
 			}
-		}
-		if len(messageIds) > 0 {
-			c.messageIds = messageIds
 		}
 	}
 	return nil

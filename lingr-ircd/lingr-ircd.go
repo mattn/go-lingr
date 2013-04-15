@@ -16,6 +16,7 @@ var addr = flag.String("addr", ":26667", "address:port")
 var apikey = flag.String("apikey", "", "lingr apikey")
 var rooms = flag.String("rooms", "", "lingr rooms")
 var debug = flag.Bool("debug", false, "debug stream")
+
 //var backlog = flag.Int("backlog", 0, "backlog count")
 
 func prefix(user string) string {
@@ -41,7 +42,7 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 		}
 		if room != nil {
 			fmt.Fprintf(conn, ":%s JOIN #%s\n", prefix(user), id)
-			fmt.Fprintf(conn, ":lingr %03d #%s :%s\n", 332, user, room.Name)
+			fmt.Fprintf(conn, ":lingr %03d %s #%s :%s\n", 332, user, room.Id, room.Name)
 			var names []string
 			for _, member := range room.Roster.Members {
 				if member.IsOwner {
@@ -54,19 +55,19 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 			fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
 		}
 		/*
-		if backlog {
-			for _, message := range room.BackLog {
-				lines := strings.Split(message.Text, "\n")
-				for _, line := range lines {
-					fmt.Fprintf(conn, ":%s %s #%s :%s\n",
-						prefix(message.SpeakerId),
-						"NOTICE",
-						room.Id,
-						strings.TrimSpace(line))
+			if backlog {
+				for _, message := range room.BackLog {
+					lines := strings.Split(message.Text, "\n")
+					for _, line := range lines {
+						fmt.Fprintf(conn, ":%s %s #%s :%s\n",
+							prefix(message.SpeakerId),
+							"NOTICE",
+							room.Id,
+							strings.TrimSpace(line))
+					}
 				}
+				room.BackLog = []Message {}
 			}
-			room.BackLog = []Message {}
-		}
 		*/
 	}
 }
@@ -82,7 +83,7 @@ func ClientConn(conn net.Conn) {
 
 	done := make(chan bool)
 	defer func() {
-		done <-true
+		done <- true
 	}()
 
 	for {
@@ -132,7 +133,7 @@ func ClientConn(conn net.Conn) {
 					}
 				}
 				if found == -1 {
-					room.Roster.Members = append(room.Roster.Members, lingr.Member {
+					room.Roster.Members = append(room.Roster.Members, lingr.Member{
 						presence.Username,
 						presence.Nickname,
 						presence.IconUrl,
@@ -213,6 +214,7 @@ func ClientConn(conn net.Conn) {
 			fmt.Fprintf(conn, ":%s PONG #%s\n", prefix(user), args[0])
 		case "JOIN":
 			rooms := strings.Split(args[0], ",")
+			requireUpdate := false
 			for _, room := range rooms {
 				for len(room) > 0 && room[0] == '#' {
 					room = room[1:]
@@ -226,12 +228,16 @@ func ClientConn(conn net.Conn) {
 				}
 				if len(room) > 0 && found == -1 {
 					client.RoomIds = append(client.RoomIds, room)
+					requireUpdate = true
 				}
 			}
-			log.Printf("subscribing %s\n", args[0])
-			updateChannels(client, conn, user)
+			if requireUpdate {
+				log.Printf("subscribing %s\n", args[0])
+				updateChannels(client, conn, user)
+			}
 		case "PART":
 			rooms := strings.Split(args[0], ",")
+			requireUpdate := false
 			for _, room := range rooms {
 				for len(room) > 0 && room[0] == '#' {
 					room = room[1:]
@@ -245,10 +251,13 @@ func ClientConn(conn net.Conn) {
 				}
 				if found != -1 {
 					client.RoomIds = append(client.RoomIds[:found], client.RoomIds[found+1:]...)
+					requireUpdate = true
 				}
 			}
-			log.Printf("unsubscribing %s\n", args[0])
-			updateChannels(client, conn, user)
+			if requireUpdate {
+				log.Printf("unsubscribing %s\n", args[0])
+				updateChannels(client, conn, user)
+			}
 		case "QUIT":
 			fmt.Fprintf(conn, "ERROR :Closing Link: %s (\"Client quit\")\n", prefix(user))
 			return
