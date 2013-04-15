@@ -286,6 +286,9 @@ func (c *Client) Observe() error {
 		}
 		for _, event := range res.Events {
 			for _, r := range c.Rooms {
+				if r.Id != event.Message.Room {
+					continue
+				}
 				if event.Message != nil && c.OnMessage != nil {
 					if event.Message.PublicSessionId == c.publicId {
 						event.Message.Mine = true
@@ -303,9 +306,7 @@ func (c *Client) Observe() error {
 							c.messageIds = c.messageIds[1:]
 						}
 						c.messageIds = append(c.messageIds, event.Message.Id)
-						if r.Id == event.Message.Room {
-							c.OnMessage(r, *event.Message)
-						}
+						c.OnMessage(r, *event.Message)
 					}
 				}
 				if event.Presence != nil {
