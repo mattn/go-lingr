@@ -286,10 +286,10 @@ func (c *Client) Observe() error {
 		}
 		for _, event := range res.Events {
 			for _, r := range c.Rooms {
-				if r.Id != event.Message.Room {
-					continue
-				}
 				if event.Message != nil && c.OnMessage != nil {
+					if r.Id != event.Message.Room {
+						continue
+					}
 					if event.Message.PublicSessionId == c.publicId {
 						event.Message.Mine = true
 					}
@@ -310,13 +310,14 @@ func (c *Client) Observe() error {
 					}
 				}
 				if event.Presence != nil {
-					if r.Id == event.Presence.Room {
-						if event.Presence.Status == "online" && c.OnJoin != nil {
-							c.OnJoin(r, *event.Presence)
-						}
-						if event.Presence.Status == "offline" && c.OnLeave != nil {
-							c.OnLeave(r, *event.Presence)
-						}
+					if r.Id != event.Presence.Room {
+						continue
+					}
+					if event.Presence.Status == "online" && c.OnJoin != nil {
+						c.OnJoin(r, *event.Presence)
+					}
+					if event.Presence.Status == "offline" && c.OnLeave != nil {
+						c.OnLeave(r, *event.Presence)
 					}
 				}
 			}
