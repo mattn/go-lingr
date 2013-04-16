@@ -302,7 +302,7 @@ func (c *Client) Observe() error {
 					}
 
 					if !found {
-						if len(c.messageIds) > 10 {
+						if len(c.messageIds) > 20 {
 							c.messageIds = c.messageIds[1:]
 						}
 						c.messageIds = append(c.messageIds, event.Message.Id)
