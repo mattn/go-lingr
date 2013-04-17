@@ -117,6 +117,7 @@ func ClientConn(conn net.Conn) {
 				}
 
 				lines := strings.Split(message.Text, "\n")
+				log.Printf("%v\n", lines)
 				for _, line := range lines {
 					fmt.Fprintf(conn, ":%s %s #%s :%s\n",
 						prefix(message.SpeakerId),
@@ -126,39 +127,31 @@ func ClientConn(conn net.Conn) {
 				}
 			}
 			client.OnJoin = func(room lingr.Room, presence lingr.Presence) {
-				found := -1
-				for i, m := range room.Roster.Members {
-					if m.Username == presence.Username {
-						found = i
+				for _, member := range room.Roster.Members {
+					if member.Username == presence.Username {
+						fmt.Fprintf(conn, ":%s %s #%s\n",
+							prefix(presence.Username),
+							"JOIN",
+							room.Id)
+						if member.IsOwner {
+							fmt.Fprintf(conn, ":%s %s #%s +o %s\n",
+								prefix(presence.Username),
+								"MODE",
+								room.Id,
+								presence.Username)
+						}
 					}
 				}
-				if found == -1 {
-					room.Roster.Members = append(room.Roster.Members, lingr.Member{
-						presence.Username,
-						presence.Nickname,
-						presence.IconUrl,
-						false,
-						true})
-				}
-				fmt.Fprintf(conn, ":%s %s #%s\n",
-					prefix(presence.Username),
-					"JOIN",
-					room.Id)
 			}
 			client.OnLeave = func(room lingr.Room, presence lingr.Presence) {
-				found := -1
-				for i, m := range room.Roster.Members {
-					if m.Username == presence.Username {
-						found = i
+				for _, member := range room.Roster.Members {
+					if member.Username == presence.Username {
+						fmt.Fprintf(conn, ":%s %s #%s\n",
+							prefix(presence.Username),
+							"PART",
+							room.Id)
 					}
 				}
-				if found != -1 {
-					room.Roster.Members = append(room.Roster.Members[:found], room.Roster.Members[found+1:]...)
-				}
-				fmt.Fprintf(conn, ":%s %s #%s\n",
-					prefix(presence.Username),
-					"PART",
-					room.Id)
 			}
 
 			if rooms != nil && len(*rooms) > 0 {
