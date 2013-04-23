@@ -87,8 +87,8 @@ func ClientConn(conn net.Conn) {
 	}()
 
 	for {
-		line, _, e := r.ReadLine()
-		if e != nil {
+		line, _, err := r.ReadLine()
+		if err != nil {
 			return
 		}
 		tokens := strings.SplitN(string(line), " ", 3)
@@ -106,7 +106,6 @@ func ClientConn(conn net.Conn) {
 			log.Printf("connecting to Lingr: %s\n", user)
 			client = lingr.NewClient(user, password, *apikey)
 			client.Debug = *debug
-			client.CreateSession()
 			client.OnMessage = func(room lingr.Room, message lingr.Message) {
 				if message.Mine {
 					return
@@ -153,11 +152,21 @@ func ClientConn(conn net.Conn) {
 					}
 				}
 			}
-
-			if rooms != nil && len(*rooms) > 0 {
-				client.RoomIds = strings.Split(*rooms, ",")
-			} else {
-				client.GetRooms()
+			for {
+				if client.CreateSession() == false {
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				if rooms != nil && len(*rooms) > 0 {
+					client.RoomIds = strings.Split(*rooms, ",")
+				} else {
+					client.GetRooms()
+				}
+				if client.RoomIds == nil {
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				break
 			}
 			updateChannels(client, conn, user)
 			go func() {
@@ -169,7 +178,7 @@ func ClientConn(conn net.Conn) {
 					}
 					log.Printf("observing")
 					if client.Observe() != nil || len(client.RoomIds) == 0 {
-						time.Sleep(1e9)
+						time.Sleep(1 * time.Second)
 					}
 					runtime.GC()
 				}
@@ -261,14 +270,14 @@ func ClientConn(conn net.Conn) {
 func main() {
 	flag.Parse()
 
-	l, e := net.Listen("tcp", *addr)
-	if e != nil {
-		panic(e.Error())
+	l, err := net.Listen("tcp", *addr)
+	if err != nil {
+		panic(err.Error())
 	}
 	for {
-		c, e := l.Accept()
-		if e != nil {
-			panic(e.Error())
+		c, err := l.Accept()
+		if err != nil {
+			panic(err.Error())
 		}
 		go ClientConn(c)
 	}
