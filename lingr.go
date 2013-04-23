@@ -2,6 +2,7 @@ package lingr
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -308,48 +309,49 @@ func (c *Client) Observe() error {
 		}
 		return e
 	}
-	if res.Status == "ok" {
-		if res.Counter != 0 {
-			if c.counter == res.Counter {
-				return nil
-			}
-			c.counter = res.Counter
+	if res.Status != "ok" {
+		return errors.New(res.Status)
+	}
+	if res.Counter != 0 {
+		if c.counter == res.Counter {
+			return nil
 		}
-		for _, event := range res.Events {
-			for _, r := range c.Rooms {
-				if event.Message != nil && c.OnMessage != nil {
-					if r.Id != event.Message.Room {
-						continue
-					}
-					if event.Message.PublicSessionId == c.publicId {
-						event.Message.Mine = true
-					}
+		c.counter = res.Counter
+	}
+	for _, event := range res.Events {
+		for _, r := range c.Rooms {
+			if event.Message != nil && c.OnMessage != nil {
+				if r.Id != event.Message.Room {
+					continue
+				}
+				if event.Message.PublicSessionId == c.publicId {
+					event.Message.Mine = true
+				}
 
-					found := false
-					for _, id := range c.messageIds {
-						if id == event.Message.Id {
-							found = true
-						}
-					}
-
-					if !found {
-						if len(c.messageIds) > 20 {
-							c.messageIds = c.messageIds[1:]
-						}
-						c.messageIds = append(c.messageIds, event.Message.Id)
-						c.OnMessage(r, *event.Message)
+				found := false
+				for _, id := range c.messageIds {
+					if id == event.Message.Id {
+						found = true
 					}
 				}
-				if event.Presence != nil {
-					if r.Id != event.Presence.Room {
-						continue
+
+				if !found {
+					if len(c.messageIds) > 20 {
+						c.messageIds = c.messageIds[1:]
 					}
-					if event.Presence.Status == "online" && c.OnJoin != nil {
-						c.OnJoin(r, *event.Presence)
-					}
-					if event.Presence.Status == "offline" && c.OnLeave != nil {
-						c.OnLeave(r, *event.Presence)
-					}
+					c.messageIds = append(c.messageIds, event.Message.Id)
+					c.OnMessage(r, *event.Message)
+				}
+			}
+			if event.Presence != nil {
+				if r.Id != event.Presence.Room {
+					continue
+				}
+				if event.Presence.Status == "online" && c.OnJoin != nil {
+					c.OnJoin(r, *event.Presence)
+				}
+				if event.Presence.Status == "offline" && c.OnLeave != nil {
+					c.OnLeave(r, *event.Presence)
 				}
 			}
 		}
