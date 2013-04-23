@@ -301,7 +301,9 @@ func (c *Client) Observe() error {
 
 	e := c.get("event/observe", request{"session": c.session, "counter": fmt.Sprintf("%d", c.counter)}, &res)
 	if e != nil {
-		println(e.Error())
+		if te, ok := e.(net.Error); !ok || !te.Timeout() {
+			println(e.Error())
+		}
 		return e
 	}
 	if res.Status == "ok" {
