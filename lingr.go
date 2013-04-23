@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -86,6 +88,19 @@ type Presence struct {
 	Text            string `json:"text"`
 }
 
+type Membership struct {
+	IconUrl   string `json:"icon_url"`
+	Username  string `json:"username"`
+	Name      string `json:"name"`
+	IsOwner   bool   `json:"is_owner"`
+	IsOnline  bool   `json:"is_online"`
+	Pokeable  bool   `json:"pokeable"`
+	Timestamp string `json:"timestamp"`
+	Action    string `json:"action"`
+	Room      string `json:"room"`
+	Text      string `json:"text"`
+}
+
 type Event struct {
 	Id       int       `json:"event_id"`
 	Message  *Message  `json:"message"`
@@ -140,6 +155,18 @@ func NewClient(user, password, apiKey string) *Client {
 	c.password = password
 	c.apiKey = apiKey
 	c.c = http.DefaultClient
+	c.c = &http.Client{
+		Transport: &http.Transport{
+			Dial: func(proto, addr string) (net.Conn, error) {
+				d, err := net.Dial(proto, addr)
+				if err != nil {
+					return nil, err
+				}
+				d.SetDeadline(time.Now().Add(30 * time.Second))
+				return d, nil
+			},
+		},
+	}
 	c.messageIds = []string{}
 	return c
 }
