@@ -168,7 +168,7 @@ func ClientConn(conn net.Conn) {
 					default:
 					}
 					log.Printf("observing")
-					if client.Observe() != nil {
+					if client.Observe() != nil || len(client.RoomIds) == 0 {
 						time.Sleep(1e9)
 					}
 					runtime.GC()

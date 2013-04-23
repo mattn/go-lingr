@@ -25,12 +25,13 @@ type Client struct {
 	counter    int
 	messageIds []string
 
-	RoomIds   []string
-	Rooms     []Room
-	Debug     bool
-	OnJoin    func(Room, Presence)
-	OnLeave   func(Room, Presence)
-	OnMessage func(Room, Message)
+	RoomIds      []string
+	Rooms        []Room
+	Debug        bool
+	OnJoin       func(Room, Presence)
+	OnLeave      func(Room, Presence)
+	OnMessage    func(Room, Message)
+	OnMembership func(Room, Membership)
 }
 
 type request map[string]string
@@ -102,9 +103,10 @@ type Membership struct {
 }
 
 type Event struct {
-	Id       int       `json:"event_id"`
-	Message  *Message  `json:"message"`
-	Presence *Presence `json:"presence"`
+	Id         int         `json:"event_id"`
+	Message    *Message    `json:"message"`
+	Presence   *Presence   `json:"presence"`
+	Membership *Membership `json:"membership"`
 }
 
 type resRoomIds struct {
