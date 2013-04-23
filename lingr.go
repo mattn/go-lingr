@@ -162,7 +162,7 @@ func NewClient(user, password, apiKey string) *Client {
 				if err != nil {
 					return nil, err
 				}
-				d.SetDeadline(time.Now().Add(30 * time.Second))
+				d.SetDeadline(time.Now().Add(3 * time.Minute))
 				return d, nil
 			},
 		},
