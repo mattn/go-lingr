@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -29,8 +28,7 @@ type Client struct {
 	RoomIds      []string
 	Rooms        []Room
 	Debug        bool
-	OnJoin       func(Room, Presence)
-	OnLeave      func(Room, Presence)
+	OnPresence   func(Room, Presence)
 	OnMessage    func(Room, Message)
 	OnMembership func(Room, Membership)
 }
@@ -204,7 +202,7 @@ func (c *Client) post(path string, params request, res interface{}) error {
 	for k, v := range params {
 		values[k] = []string{v}
 	}
-	r, e := c.c.Post(c.endpoint+path, "application/x-www-form-urlencoded", strings.NewReader(values.Encode()))
+	r, e := c.c.PostForm(c.endpoint+path, values)
 	if e != nil {
 		return e
 	}
@@ -320,7 +318,7 @@ func (c *Client) Observe() error {
 	}
 	for _, event := range res.Events {
 		for _, r := range c.Rooms {
-			if event.Message != nil && c.OnMessage != nil {
+			if event.Message != nil {
 				if r.Id != event.Message.Room {
 					continue
 				}
@@ -340,19 +338,21 @@ func (c *Client) Observe() error {
 						c.messageIds = c.messageIds[1:]
 					}
 					c.messageIds = append(c.messageIds, event.Message.Id)
-					c.OnMessage(r, *event.Message)
+					if c.OnMessage != nil {
+						c.OnMessage(r, *event.Message)
+					}
 				}
 			}
 			if event.Presence != nil {
 				if r.Id != event.Presence.Room {
 					continue
 				}
-				if event.Presence.Status == "online" && c.OnJoin != nil {
-					c.OnJoin(r, *event.Presence)
+				if c.OnPresence != nil {
+					c.OnPresence(r, *event.Presence)
 				}
-				if event.Presence.Status == "offline" && c.OnLeave != nil {
-					c.OnLeave(r, *event.Presence)
-				}
+			}
+			if event.Membership != nil {
+				c.OnMembership(r, *event.Membership)
 			}
 		}
 	}

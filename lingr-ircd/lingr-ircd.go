@@ -125,30 +125,48 @@ func ClientConn(conn net.Conn) {
 						strings.TrimSpace(line))
 				}
 			}
-			client.OnJoin = func(room lingr.Room, presence lingr.Presence) {
+			client.OnPresence = func(room lingr.Room, presence lingr.Presence) {
+				isJoin := true
+				if presence.Status == "offline" {
+					isJoin = false
+				}
 				for _, member := range room.Roster.Members {
 					if member.Username == presence.Username {
-						fmt.Fprintf(conn, ":%s %s #%s\n",
-							prefix(presence.Username),
-							"JOIN",
-							room.Id)
-						if member.IsOwner {
-							fmt.Fprintf(conn, ":%s %s #%s +o %s\n",
+						if isJoin {
+							fmt.Fprintf(conn, ":%s %s #%s\n",
 								prefix(presence.Username),
-								"MODE",
-								room.Id,
-								presence.Username)
+								"JOIN",
+								room.Id)
+							if member.IsOwner {
+								fmt.Fprintf(conn, ":%s %s #%s +o %s\n",
+									prefix(presence.Username),
+									"MODE",
+									room.Id,
+									presence.Username)
+							}
+						} else {
+							fmt.Fprintf(conn, ":%s %s #%s\n",
+								prefix(presence.Username),
+								"PART",
+								room.Id)
 						}
 					}
 				}
 			}
-			client.OnLeave = func(room lingr.Room, presence lingr.Presence) {
+			client.OnMembership = func(room lingr.Room, membership lingr.Membership) {
 				for _, member := range room.Roster.Members {
-					if member.Username == presence.Username {
-						fmt.Fprintf(conn, ":%s %s #%s\n",
-							prefix(presence.Username),
-							"PART",
-							room.Id)
+					if member.Username == membership.Username {
+						member.IsOwner = membership.IsOwner
+						mode := "-o"
+						if member.IsOwner {
+							mode = "+o"
+						}
+						fmt.Fprintf(conn, ":%s %s #%s %s %s\n",
+							prefix(membership.Username),
+							"MODE",
+							room.Id,
+							mode,
+							membership.Username)
 					}
 				}
 			}
