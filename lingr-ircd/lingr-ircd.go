@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode"
 )
 
 var addr = flag.String("addr", ":26667", "address:port")
@@ -122,7 +123,7 @@ func ClientConn(conn net.Conn) {
 						prefix(message.SpeakerId),
 						cmd,
 						room.Id,
-						strings.TrimSpace(line))
+						strings.TrimRightFunc(line, unicode.IsSpace))
 				}
 			}
 			client.OnPresence = func(room lingr.Room, presence lingr.Presence) {
