@@ -227,6 +227,9 @@ func ClientConn(conn net.Conn) {
 				room = room[1:]
 			}
 			text := args[1]
+			for len(text) > 0 && text[0] == ':' {
+				text = text[1:]
+			}
 			log.Printf("saying #%s %s\n", room, text)
 			client.Say(room, text)
 		case "PING":
