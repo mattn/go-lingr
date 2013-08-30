@@ -78,12 +78,11 @@ func ClientConn(conn net.Conn) {
 	password := ""
 	var client *lingr.Client
 
-	defer conn.Close()
-
 	r := bufio.NewReader(conn)
 
 	done := make(chan bool)
 	defer func() {
+		defer conn.Close()
 		done <- true
 	}()
 
@@ -171,21 +170,23 @@ func ClientConn(conn net.Conn) {
 					}
 				}
 			}
+			retry := 0
 			for {
-				if client.CreateSession() == false {
-					time.Sleep(1 * time.Second)
-					continue
+				if client.CreateSession() {
+					if rooms != nil && len(*rooms) > 0 {
+						client.RoomIds = strings.Split(*rooms, ",")
+					} else {
+						client.GetRooms()
+					}
+					if client.RoomIds != nil {
+						break
+					}
 				}
-				if rooms != nil && len(*rooms) > 0 {
-					client.RoomIds = strings.Split(*rooms, ",")
-				} else {
-					client.GetRooms()
+				time.Sleep(1 * time.Second)
+				retry++
+				if retry == 3 {
+					return
 				}
-				if client.RoomIds == nil {
-					time.Sleep(1 * time.Second)
-					continue
-				}
-				break
 			}
 			updateChannels(client, conn, user)
 			go func() {
