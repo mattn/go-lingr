@@ -7,6 +7,8 @@ import (
 	"github.com/mattn/go-lingr"
 	"log"
 	"net"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -17,6 +19,7 @@ var addr = flag.String("addr", ":26667", "address:port")
 var apikey = flag.String("apikey", "", "lingr apikey")
 var rooms = flag.String("rooms", "", "lingr rooms")
 var debug = flag.Bool("debug", false, "debug stream")
+var logpath = flag.String("logpath", ".", "path to logging")
 
 //var backlog = flag.Int("backlog", 0, "backlog count")
 
@@ -73,6 +76,14 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 	}
 }
 
+type logline struct {
+	time     time.Time
+	nickname string
+	room     string
+	network  string
+	message  string
+}
+
 func ClientConn(conn net.Conn) {
 	user := ""
 	password := ""
@@ -80,8 +91,50 @@ func ClientConn(conn net.Conn) {
 
 	r := bufio.NewReader(conn)
 
+	lc := make(chan *logline)
+	go func() {
+		oldname := ""
+		var f *os.File
+		for ll := range lc {
+			fname := filepath.Join(*logpath, fmt.Sprintf("log/%d/%s/#%s.%d-%d.log",
+				ll.time.Year(),
+				ll.network,
+				ll.room,
+				ll.time.Month(),
+				ll.time.Day(),
+			))
+			if fname != oldname {
+				if f != nil {
+					f.Close()
+				}
+				err := os.MkdirAll(filepath.Dir(fname), 0755)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				ff, err := os.OpenFile(fname, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				f = ff
+				defer f.Close()
+			}
+			f.Write([]byte(fmt.Sprintf("%02d:%02d (%s) %s\n",
+				ll.time.Hour(),
+				ll.time.Minute(),
+				ll.nickname,
+				ll.message,
+			)))
+			if f != nil {
+				f.Close()
+			}
+		}
+	}()
+
 	done := make(chan bool)
 	defer func() {
+		close(lc)
 		defer conn.Close()
 		done <- true
 	}()
@@ -116,13 +169,21 @@ func ClientConn(conn net.Conn) {
 				}
 
 				lines := strings.Split(message.Text, "\n")
-				log.Printf("%v\n", lines)
+
 				for _, line := range lines {
+					line = strings.TrimRightFunc(line, unicode.IsSpace)
 					fmt.Fprintf(conn, ":%s %s #%s :%s\n",
 						prefix(message.SpeakerId),
 						cmd,
 						room.Id,
-						strings.TrimRightFunc(line, unicode.IsSpace))
+						line)
+					lc <- &logline{
+						time:     time.Now(),
+						nickname: message.SpeakerId,
+						room:     room.Id,
+						network:  "lingr.com",
+						message:  line,
+					}
 				}
 			}
 			client.OnPresence = func(room lingr.Room, presence lingr.Presence) {
