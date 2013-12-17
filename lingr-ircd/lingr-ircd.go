@@ -19,7 +19,7 @@ var addr = flag.String("addr", ":26667", "address:port")
 var apikey = flag.String("apikey", "", "lingr apikey")
 var rooms = flag.String("rooms", "", "lingr rooms")
 var debug = flag.Bool("debug", false, "debug stream")
-var logpath = flag.String("logpath", ".", "path to logging")
+var logpath = flag.String("logpath", "log", "path to logging")
 
 //var backlog = flag.Int("backlog", 0, "backlog count")
 
@@ -96,7 +96,7 @@ func ClientConn(conn net.Conn) {
 		oldname := ""
 		var f *os.File
 		for ll := range lc {
-			fname := filepath.Join(*logpath, fmt.Sprintf("log/%d/%s/#%s.%d-%d.log",
+			fname := filepath.Join(*logpath, fmt.Sprintf("%d/%s/#%s.%d-%d.log",
 				ll.time.Year(),
 				ll.network,
 				ll.room,
