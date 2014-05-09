@@ -58,7 +58,7 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 			fmt.Fprintf(conn, ":lingr %03d %s = #%s :%s\n", 353, user, id, strings.Join(names, " "))
 			fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
 
-			if *backlog > 0 && strings.Contains(user, "backlog") {
+			if *backlog > 0 {
 				messages, err := client.GetArchives(room.Id, "", *backlog)
 				if err != nil {
 					log.Printf("connected to Lingr\n")
@@ -156,6 +156,11 @@ func ClientConn(conn net.Conn) {
 		switch cmd {
 		case "NICK":
 			user = args[0]
+			if strings.HasSuffix(user, "_backlog") {
+				user = user[:len(user)-8]
+			} else {
+				*backlog = 0
+			}
 		case "PASS":
 			password = args[0]
 		case "USER":
