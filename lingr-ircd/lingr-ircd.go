@@ -236,7 +236,8 @@ func ClientConn(conn net.Conn) {
 			}
 			retry := 0
 			for {
-				if client.CreateSession() == nil {
+				err = client.CreateSession()
+				if err == nil {
 					if rooms != nil && len(*rooms) > 0 {
 						client.RoomIds = strings.Split(*rooms, ",")
 					} else {
@@ -245,6 +246,8 @@ func ClientConn(conn net.Conn) {
 					if client.RoomIds != nil {
 						break
 					}
+				} else {
+					log.Println(err)
 				}
 				time.Sleep(1 * time.Second)
 				retry++
