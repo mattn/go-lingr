@@ -57,10 +57,11 @@ type Roster struct {
 }
 
 type Room struct {
-	Id      string      `json:"id"`
-	Name    string      `json:"name"`
-	Blurb   interface{} `json:"blurb"`
-	Roster  Roster      `json:"roster"`
+	Id       string      `json:"id"`
+	Name     string      `json:"name"`
+	Blurb    interface{} `json:"blurb"`
+	Roster   Roster      `json:"roster"`
+	Messages []Message   `json:"messages"`
 }
 
 type Message struct {

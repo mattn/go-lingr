@@ -59,19 +59,19 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 			fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
 
 			if *backlog > 0 {
-				messages, err := client.GetArchives(room.Id, "", *backlog)
-				if err != nil {
-					log.Printf("connected to Lingr\n")
-				} else {
-					for _, message := range messages {
-						lines := strings.Split(message.Text, "\n")
-						for _, line := range lines {
-							fmt.Fprintf(conn, ":%s %s #%s :%s\n",
-								prefix(message.SpeakerId),
-								"NOTICE",
-								room.Id,
-								strings.TrimSpace(line))
+				for _, r := range client.Rooms {
+					if r.Id == room.Id {
+						for _, message := range room.Messages {
+							lines := strings.Split(message.Text, "\n")
+							for _, line := range lines {
+								fmt.Fprintf(conn, ":%s %s #%s :%s\n",
+									prefix(message.SpeakerId),
+									"NOTICE",
+									room.Id,
+									strings.TrimSpace(line))
+							}
 						}
+						break
 					}
 				}
 			}
@@ -156,15 +156,16 @@ func ClientConn(conn net.Conn) {
 		switch cmd {
 		case "NICK":
 			user = args[0]
-			if strings.HasSuffix(user, "_backlog") {
-				user = user[:len(user)-8]
-			} else {
-				*backlog = 0
-			}
 		case "PASS":
 			password = args[0]
 		case "USER":
 			log.Printf("connecting to Lingr: %s\n", user)
+			if len(args) == 2 {
+				names := strings.Split(args[1], " ")
+				if len(names) >= 3 && !strings.Contains(names[2], "backlog") {
+					*backlog = 0
+				}
+			}
 			client = lingr.NewClient(user, password, *apikey)
 			client.Debug = *debug
 			client.OnMessage = func(room lingr.Room, message lingr.Message) {
