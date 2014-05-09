@@ -28,6 +28,7 @@ type Client struct {
 	RoomIds      []string
 	Rooms        []Room
 	Debug        bool
+	BackLog      bool
 	OnPresence   func(Room, Presence)
 	OnMessage    func(Room, Message)
 	OnMembership func(Room, Membership)
