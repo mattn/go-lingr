@@ -60,7 +60,6 @@ type Room struct {
 	Id      string      `json:"id"`
 	Name    string      `json:"name"`
 	Blurb   interface{} `json:"blurb"`
-	BackLog []Message   `json:"messages"`
 	Roster  Roster      `json:"roster"`
 }
 

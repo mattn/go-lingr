@@ -21,7 +21,7 @@ var rooms = flag.String("rooms", "", "lingr rooms")
 var debug = flag.Bool("debug", false, "debug stream")
 var logpath = flag.String("logpath", "log", "path to logging")
 
-//var backlog = flag.Int("backlog", 0, "backlog count")
+var backlog = flag.Int("backlog", 30, "backlog count")
 
 func prefix(user string) string {
 	return fmt.Sprintf("%s!%s@lingr.com", user, user)
@@ -57,22 +57,25 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 			}
 			fmt.Fprintf(conn, ":lingr %03d %s = #%s :%s\n", 353, user, id, strings.Join(names, " "))
 			fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
-		}
-		/*
-			if backlog {
-				for _, message := range room.BackLog {
-					lines := strings.Split(message.Text, "\n")
-					for _, line := range lines {
-						fmt.Fprintf(conn, ":%s %s #%s :%s\n",
-							prefix(message.SpeakerId),
-							"NOTICE",
-							room.Id,
-							strings.TrimSpace(line))
+
+			if *backlog > 0 && strings.Contains(user, "backlog") {
+				messages, err := client.GetArchives(room.Id, "", *backlog)
+				if err != nil {
+					log.Printf("connected to Lingr\n")
+				} else {
+					for _, message := range messages {
+						lines := strings.Split(message.Text, "\n")
+						for _, line := range lines {
+							fmt.Fprintf(conn, ":%s %s #%s :%s\n",
+								prefix(message.SpeakerId),
+								"NOTICE",
+								room.Id,
+								strings.TrimSpace(line))
+						}
 					}
 				}
-				room.BackLog = []Message {}
 			}
-		*/
+		}
 	}
 }
 
@@ -233,7 +236,7 @@ func ClientConn(conn net.Conn) {
 			}
 			retry := 0
 			for {
-				if client.CreateSession() {
+				if client.CreateSession() == nil {
 					if rooms != nil && len(*rooms) > 0 {
 						client.RoomIds = strings.Split(*rooms, ",")
 					} else {
