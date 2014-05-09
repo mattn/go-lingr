@@ -222,85 +222,105 @@ func (c *Client) post(path string, params request, res interface{}) error {
 	return nil
 }
 
-func (c *Client) CreateSession() bool {
+func (c *Client) CreateSession() error {
 	var res resSession
 	e := c.post("session/create", request{
 		"user":     c.user,
 		"password": c.password,
 		"api_key":  c.apiKey}, &res)
-	if e == nil && res.Status == "ok" {
-		c.publicId = res.PublicId
-		c.nickname = res.Nickname
-		c.session = res.Session
-		return true
-	} else if e != nil {
-		println(e.Error())
+	if e != nil {
+		return e
 	}
-	return false
+	if res.Status != "ok" {
+		return errors.New(res.Status)
+	}
+	c.publicId = res.PublicId
+	c.nickname = res.Nickname
+	c.session = res.Session
+	return nil
 }
 
-func (c *Client) GetRooms() []string {
+func (c *Client) GetRooms() ([]string, error) {
 	var res resRoomIds
-	e := c.get("user/get_rooms", request{"session": c.session}, &res)
-	if e == nil && res.Status == "ok" {
-		c.RoomIds = res.RoomIds
-		return res.RoomIds
-	} else if e != nil {
-		println(e.Error())
+	e := c.get("user/get_rooms", request{
+		"session": c.session}, &res)
+	if e != nil {
+		return nil, e
+	}
+	if res.Status != "ok" {
+		return nil, errors.New(res.Status)
+	}
+	c.RoomIds = res.RoomIds
+	return res.RoomIds, nil
+}
+
+func (c *Client) ShowRoom(room_id string) error {
+	var res resRooms
+	e := c.get("room/show", request{
+		"session": c.session,
+		"room":    room_id}, &res)
+	if e != nil {
+		return e
+	}
+	if res.Status != "ok" {
+		return errors.New(res.Status)
+	}
+	c.Rooms = res.Rooms
+	return nil
+}
+
+func (c *Client) Subscribe(room_id string) error {
+	var res resSubscribe
+	e := c.get("room/subscribe", request{
+		"session": c.session,
+		"room":    room_id,
+		"reset":   "true"}, &res)
+	if e != nil {
+		return e
+	}
+	if res.Status != "ok" {
+		return errors.New(res.Status)
+	}
+	c.counter = res.Counter
+	return nil
+}
+
+func (c *Client) Unsubscribe(room_id string) error {
+	var res resUnsubscribe
+	e := c.get("room/unsubscribe", request{
+		"session": c.session,
+		"room":    room_id}, &res)
+	if e != nil {
+		return e
+	}
+	if res.Status != "ok" {
+		return errors.New(res.Status)
 	}
 	return nil
 }
 
-func (c *Client) ShowRoom(room_id string) bool {
-	var res resRooms
-	e := c.get("room/show", request{"session": c.session, "room": room_id}, &res)
-	if e == nil && res.Status == "ok" {
-		c.Rooms = res.Rooms
-		return true
-	} else if e != nil {
-		println(e.Error())
-	}
-	return false
-}
-
-func (c *Client) Subscribe(room_id string) bool {
-	var res resSubscribe
-	e := c.get("room/subscribe", request{"session": c.session, "room": room_id, "reset": "true"}, &res)
-	if e == nil && res.Status == "ok" {
-		c.counter = res.Counter
-		return true
-	} else if e != nil {
-		println(e.Error())
-	}
-	return false
-}
-
-func (c *Client) Unsubscribe(room_id string) bool {
-	var res resUnsubscribe
-	e := c.get("room/unsubscribe", request{"session": c.session, "room": room_id}, &res)
-	if e == nil && res.Status == "ok" {
-		return true
-	} else if e != nil {
-		println(e.Error())
-	}
-	return false
-}
-
-func (c *Client) Say(room_id string, text string) bool {
+func (c *Client) Say(room_id string, text string) error {
 	var res resSay
-	e := c.get("room/say", request{"session": c.session, "room": room_id, "nickname": c.nickname, "text": text}, &res)
-	if e == nil && res.Status == "ok" {
-		return true
-	} else if e != nil {
-		println(e.Error())
+	e := c.get("room/say", request{
+		"session":  c.session,
+		"room":     room_id,
+		"nickname": c.nickname,
+		"text":     text}, &res)
+	if e != nil {
+		return e
 	}
-	return false
+	if res.Status != "ok" {
+		return errors.New(res.Status)
+	}
+	return nil
 }
 
 func (c *Client) Observe() error {
 	var res resObserve
 
-	e := c.get("event/observe", request{"session": c.session, "counter": fmt.Sprintf("%d", c.counter)}, &res)
+	e := c.get("event/observe", request{
+		"session": c.session,
+		"counter": fmt.Sprint(c.counter)}, &res)
 	if e != nil {
 		if te, ok := e.(net.Error); !ok || !te.Timeout() {
 			println(e.Error())
@@ -357,4 +377,20 @@ func (c *Client) Observe() error {
 		}
 	}
 	return nil
+}
+
+func (c *Client) GetArchives(room_id string, max_message_id string, count int) ([]Message, error) {
+	var res resArchives
+	e := c.get("room/get_archives", request{
+		"session": c.session,
+		"room":    room_id,
+		"before":  max_message_id,
+		"limit":   fmt.Sprint(count)}, &res)
+	if e != nil {
+		return nil, e
+	}
+	if res.Status != "ok" {
+		return nil, errors.New(res.Status)
+	}
+	return res.Messages, nil
 }
