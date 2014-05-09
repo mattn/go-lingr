@@ -21,7 +21,7 @@ var rooms = flag.String("rooms", "", "lingr rooms")
 var debug = flag.Bool("debug", false, "debug stream")
 var logpath = flag.String("logpath", "log", "path to logging")
 
-var backlog = flag.Int("backlog", 30, "backlog count")
+var backlog = flag.Bool("backlog", true, "show backlog")
 
 func prefix(user string) string {
 	return fmt.Sprintf("%s!%s@lingr.com", user, user)
@@ -58,7 +58,7 @@ func updateChannels(client *lingr.Client, conn net.Conn, user string) {
 			fmt.Fprintf(conn, ":lingr %03d %s = #%s :%s\n", 353, user, id, strings.Join(names, " "))
 			fmt.Fprintf(conn, ":lingr %03d %s #%s :End of NAMES list.\n", 366, user, id)
 
-			if *backlog > 0 {
+			if *backlog {
 				for _, r := range client.Rooms {
 					if r.Id == room.Id {
 						for _, message := range room.Messages {
@@ -163,7 +163,7 @@ func ClientConn(conn net.Conn) {
 			if len(args) == 2 {
 				names := strings.Split(args[1], " ")
 				if len(names) >= 3 && !strings.Contains(names[2], "backlog") {
-					*backlog = 0
+					*backlog = false
 				}
 			}
 			client = lingr.NewClient(user, password, *apikey)
