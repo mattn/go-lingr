@@ -102,6 +102,10 @@ type Membership struct {
 	Text      string `json:"text"`
 }
 
+type Status struct {
+	Events []Events `json:"events"`
+}
+
 type Event struct {
 	Id         int         `json:"event_id"`
 	Message    *Message    `json:"message"`
@@ -394,4 +398,12 @@ func (c *Client) GetArchives(room_id string, max_message_id string, count int) (
 		return nil, errors.New(res.Status)
 	}
 	return res.Messages, nil
+}
+
+func DecodeStatus(reader io.Reader) (*Status, error) {
+	var status Status
+	if err := json.NewDecoder(reader).Decode(&status); err != nil {
+		return nil, err
+	}
+	return &status, nil
 }
