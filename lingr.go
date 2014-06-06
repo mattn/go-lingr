@@ -103,7 +103,7 @@ type Membership struct {
 }
 
 type Status struct {
-	Events []Events `json:"events"`
+	Events []Event `json:"events"`
 }
 
 type Event struct {
