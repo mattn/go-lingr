@@ -121,13 +121,13 @@ func ClientConn(conn net.Conn) {
 				f = ff
 				defer f.Close()
 			}
-			f.Write([]byte(fmt.Sprintf("%02d:%02d (%s) %s\n",
-				ll.time.Hour(),
-				ll.time.Minute(),
-				ll.nickname,
-				ll.message,
-			)))
 			if f != nil {
+				f.Write([]byte(fmt.Sprintf("%02d:%02d (%s) %s\n",
+					ll.time.Hour(),
+					ll.time.Minute(),
+					ll.nickname,
+					ll.message,
+				)))
 				f.Close()
 			}
 		}
@@ -136,6 +136,7 @@ func ClientConn(conn net.Conn) {
 	done := make(chan bool)
 	defer func() {
 		close(lc)
+		lc = nil
 		defer conn.Close()
 		done <- true
 	}()
@@ -178,12 +179,14 @@ func ClientConn(conn net.Conn) {
 						cmd,
 						room.Id,
 						line)
-					lc <- &logline{
-						time:     time.Now(),
-						nickname: message.SpeakerId,
-						room:     room.Id,
-						network:  "lingr.com",
-						message:  line,
+					if lc != nil {
+						lc <- &logline{
+							time:     time.Now(),
+							nickname: message.SpeakerId,
+							room:     room.Id,
+							network:  "lingr.com",
+							message:  line,
+						}
 					}
 				}
 			}
