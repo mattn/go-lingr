@@ -272,6 +272,7 @@ func ClientConn(conn net.Conn) {
 					}
 					log.Printf("observing")
 					if client.Observe() != nil || len(client.RoomIds) == 0 {
+						client = lingr.NewClient(user, password, *apikey)
 						time.Sleep(1 * time.Second)
 					}
 					runtime.GC()
