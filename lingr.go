@@ -327,9 +327,6 @@ func (c *Client) Observe() error {
 		"session": c.session,
 		"counter": fmt.Sprint(c.counter)}, &res)
 	if e != nil {
-		if te, ok := e.(net.Error); !ok || !te.Timeout() {
-			println(e.Error())
-		}
 		return e
 	}
 	if res.Status != "ok" {

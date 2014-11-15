@@ -271,8 +271,15 @@ func ClientConn(conn net.Conn) {
 					default:
 					}
 					log.Printf("observing")
-					if client.Observe() != nil || len(client.RoomIds) == 0 {
-						client = lingr.NewClient(user, password, *apikey)
+					err := client.Observe()
+					if len(client.RoomIds) == 0 {
+						time.Sleep(1 * time.Second)
+					} else if err != nil {
+						log.Println(err)
+						if te, ok := err.(net.Error); !ok || !te.Timeout() {
+							conn.Close()
+							return
+						}
 						time.Sleep(1 * time.Second)
 					}
 					runtime.GC()
@@ -306,7 +313,10 @@ func ClientConn(conn net.Conn) {
 				text = text[1:]
 			}
 			log.Printf("saying #%s %s\n", room, text)
-			client.Say(room, text)
+			err := client.Say(room, text)
+			if err != nil {
+				log.Println(err)
+			}
 		case "PING":
 			fmt.Fprintf(conn, ":%s PONG #%s\n", prefix(user), args[0])
 		case "JOIN":
