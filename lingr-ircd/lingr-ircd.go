@@ -237,7 +237,7 @@ func ClientConn(conn net.Conn) {
 			}
 			if len(args) == 2 {
 				names := strings.Split(args[1], " ")
-				if len(names) >= 3 && !strings.Contains(names[2], "backlog") {
+				if len(names) >= 3 && strings.Contains(names[2], "backlog") {
 					client.BackLog = true
 				}
 			}
