@@ -264,6 +264,7 @@ func ClientConn(conn net.Conn) {
 			}
 			updateChannels(client, conn, user)
 			go func() {
+				retry := 0
 				for {
 					select {
 					case <-done:
@@ -275,12 +276,17 @@ func ClientConn(conn net.Conn) {
 					if len(client.RoomIds) == 0 {
 						time.Sleep(1 * time.Second)
 					} else if err != nil {
+						retry++
 						log.Println(err)
 						if te, ok := err.(net.Error); !ok || !te.Timeout() {
-							conn.Close()
-							return
+							if retry > 5 {
+								conn.Close()
+								return
+							}
 						}
 						time.Sleep(1 * time.Second)
+					} else {
+						retry = 0
 					}
 					runtime.GC()
 				}
