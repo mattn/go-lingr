@@ -314,7 +314,10 @@ func ClientConn(conn net.Conn) {
 			for len(room) > 0 && room[0] == '#' {
 				room = room[1:]
 			}
-			text := strings.TrimLeft(args[1], ":")
+			text := args[1]
+			if len(text) > 0 && text[0] == ':' {
+				text = text[1:]
+			}
 			log.Printf("saying #%s %s\n", room, text)
 			err := client.Say(room, text)
 			if err != nil {
